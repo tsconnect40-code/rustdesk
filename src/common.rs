@@ -1058,7 +1058,8 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
-    if is_custom_client() {
+    // tsconnect build: the official update is signed with another key and cannot install over this app.
+    if cfg!(target_os = "android") || is_custom_client() {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
