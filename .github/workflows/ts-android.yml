@@ -4,6 +4,9 @@ name: TS Android build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ts-android-*
 
 env:
   RUST_VERSION: "1.75"
