@@ -17,6 +17,7 @@ import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import 'home_page.dart';
+import '../ts_update.dart';
 
 /// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget implements PageShape {
@@ -124,7 +125,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
         ? const SizedBox(height: 0)
         : InkWell(
             onTap: () async {
-              final url = 'https://rustdesk.com/download';
+              final ts = isTsUpdateUrl(updateUrl);
+              final url = ts ? updateUrl : 'https://rustdesk.com/download';
               // https://pub.dev/packages/url_launcher#configuration
               // https://developer.android.com/training/package-visibility/use-cases#open-urls-custom-tabs
               //
@@ -133,14 +135,20 @@ class _ConnectionPageState extends State<ConnectionPage> {
               // 2. `<action android:name="android.support.customtabs.action.CustomTabsService" />` in AndroidManifest.xml
               //
               // But it is better to add the check.
-              await launchUrl(Uri.parse(url));
+              await launchUrl(Uri.parse(url),
+                  mode: ts
+                      ? LaunchMode.externalApplication
+                      : LaunchMode.platformDefault);
             },
             child: Container(
                 alignment: AlignmentDirectional.center,
                 width: double.infinity,
                 color: Colors.pinkAccent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(translate('Download new version'),
+                child: Text(
+                    isTsUpdateUrl(updateUrl)
+                        ? '새 버전이 있습니다 · 눌러서 설치'
+                        : translate('Download new version'),
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold))));
   }

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter_hbb/mobile/ts_update.dart';
+
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
@@ -4106,6 +4108,11 @@ void earlyAssert() {
 }
 
 void checkUpdate() {
+  if (isAndroid) {
+    // tsconnect build: updates come from our own server, not rustdesk.com
+    Timer(const Duration(seconds: 2), () => tsCheckUpdate());
+    return;
+  }
   if (!isWeb) {
     if (!bind.isCustomClient()) {
       platformFFI.registerEventHandler(

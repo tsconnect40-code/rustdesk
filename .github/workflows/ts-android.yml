@@ -130,7 +130,7 @@ jobs:
           cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/
           cp ./target/$TARGET/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
           pushd flutter
-          flutter build apk --release --target-platform android-arm64 --split-per-abi
+          flutter build apk --release --target-platform android-arm64 --split-per-abi --dart-define=TS_BUILD=${{ github.run_number }}
           popd
           cp flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk unsigned.apk
 
@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "$KS_B64" | base64 -d > ks.jks
           BT=$(ls /usr/local/lib/android/sdk/build-tools/ | sort -V | tail -n 1)
-          OUT=rustdesk-${VERSION}-ts-samsung-hangul-aarch64.apk
+          OUT=TS-remote-${VERSION}-b${{ github.run_number }}-aarch64.apk
           /usr/local/lib/android/sdk/build-tools/$BT/apksigner sign --ks ks.jks --ks-key-alias tsconnect \
             --ks-pass env:KS_PASS --key-pass env:KS_PASS --out "$OUT" unsigned.apk
           /usr/local/lib/android/sdk/build-tools/$BT/apksigner verify --print-certs "$OUT" | head -5
@@ -153,5 +153,5 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rustdesk-ts-android
-          path: rustdesk-*-ts-samsung-hangul-aarch64.apk
+          path: TS-remote-*-aarch64.apk
           retention-days: 30
