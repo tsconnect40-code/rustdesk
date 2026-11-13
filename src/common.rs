@@ -2507,6 +2507,14 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 }
 
 pub fn load_custom_client() {
+    // tsconnect build: our server as the default (user can still change it in settings).
+    #[cfg(target_os = "android")]
+    {
+        let mut s = config::DEFAULT_SETTINGS.write().unwrap();
+        s.insert("custom-rendezvous-server".to_owned(), "rd.tsconnect.kr".to_owned());
+        s.insert("key".to_owned(), "I7dWHSBPgw8yq4OAuZHxIqolOBKoc22oC2B32hFWPnY=".to_owned());
+        s.insert("api-server".to_owned(), "https://rd.tsconnect.kr".to_owned());
+    }
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
