@@ -209,8 +209,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
-            Text('로그인하지 않아도 이 PC는 원격을 받을 수 있어요.
-계정은 관리자에게 받아 주세요.',
+            Text('로그인하지 않아도 이 PC는 원격을 받을 수 있어요.\n계정은 관리자에게 받아 주세요.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: muted)),
             const SizedBox(height: 18),
