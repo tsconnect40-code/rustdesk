@@ -2509,7 +2509,14 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 
 pub fn load_custom_client() {
     // tsconnect build: our server as the default (user can still change it in settings).
-    #[cfg(target_os = "android")]
+    // On Windows the app is also renamed so it installs beside the official RustDesk
+    // (own Program Files dir, service, config dir, IPC pipe, tsremote:// links).
+    // ASCII only: the name ends up in generated .bat/sc/reg commands.
+    #[cfg(windows)]
+    {
+        *config::APP_NAME.write().unwrap() = "TSRemote".to_owned();
+    }
+    #[cfg(any(target_os = "android", windows))]
     {
         let mut s = config::DEFAULT_SETTINGS.write().unwrap();
         s.insert("custom-rendezvous-server".to_owned(), "rd.tsconnect.kr".to_owned());

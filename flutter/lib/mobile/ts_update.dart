@@ -3,6 +3,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'dart:io' show Platform;
+
 import 'package:http/http.dart' as http;
 
 import '../models/state_model.dart';
@@ -10,13 +12,14 @@ import '../models/state_model.dart';
 const int kTsBuild = int.fromEnvironment('TS_BUILD', defaultValue: 0);
 const String kTsBase = 'https://rd.tsconnect.kr/';
 const String kTsVersionUrl = '${kTsBase}api/ts-app/version';
+const String kTsWinVersionUrl = '${kTsBase}api/ts-app/version?platform=windows';
 
 bool isTsUpdateUrl(String url) => url.startsWith(kTsBase);
 
 Future<void> tsCheckUpdate() async {
   try {
     final r = await http
-        .get(Uri.parse(kTsVersionUrl))
+        .get(Uri.parse(Platform.isWindows ? kTsWinVersionUrl : kTsVersionUrl))
         .timeout(const Duration(seconds: 10));
     if (r.statusCode != 200) return;
     final j = jsonDecode(r.body);

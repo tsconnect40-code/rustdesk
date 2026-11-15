@@ -4108,7 +4108,7 @@ void earlyAssert() {
 }
 
 void checkUpdate() {
-  if (isAndroid) {
+  if (isAndroid || isWindows) {
     // tsconnect build: updates come from our own server, not rustdesk.com
     Timer(const Duration(seconds: 2), () => tsCheckUpdate());
     return;

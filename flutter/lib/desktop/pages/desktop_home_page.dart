@@ -8,11 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
+import 'package:flutter_hbb/mobile/ts_update.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -181,7 +183,47 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildRightPane(BuildContext context) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
+      // tsconnect build: connecting out needs an account; receiving does not.
+      child: Obx(() => gFFI.userModel.isLogin
+          ? ConnectionPage()
+          : _buildTsLoginGate(context)),
+    );
+  }
+
+  Widget _buildTsLoginGate(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    return Center(
+      child: Container(
+        width: 320,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 36, color: muted),
+            const SizedBox(height: 12),
+            const Text('원격 하기는 로그인 후 사용할 수 있어요',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
+            Text('로그인하지 않아도 이 PC는 원격을 받을 수 있어요.
+계정은 관리자에게 받아 주세요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: muted)),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => loginDialog(),
+                child: const Text('로그인'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -428,6 +470,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
+    // tsconnect build: new TS원격 build on rd.tsconnect.kr
+    if (isTsUpdateUrl(updateUrl) && !isCardClosed) {
+      return buildInstallCard(
+          "Status",
+          "새 버전의 TS원격이 있습니다. 내려받아 설치해 주세요.",
+          "Download",
+          () async => await launchUrl(Uri.parse(updateUrl)),
+          closeButton: true);
+    }
     if (!bind.isCustomClient() &&
         updateUrl.isNotEmpty &&
         !isCardClosed &&

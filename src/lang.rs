@@ -272,6 +272,12 @@ pub fn translate_locale(name: String, locale: &str) -> String {
                 && name != "powered_by_me"
             {
                 let app_name = crate::get_app_name();
+                // tsconnect build: show the Korean name in UI text only.
+                let app_name = if app_name == "TSRemote" {
+                    "TS원격".to_owned()
+                } else {
+                    app_name
+                };
                 if !app_name.contains("RustDesk") {
                     s = s.replace("RustDesk", &app_name);
                 } else {
