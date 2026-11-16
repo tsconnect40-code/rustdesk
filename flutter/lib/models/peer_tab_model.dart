@@ -40,9 +40,13 @@ class PeerTabModel with ChangeNotifier {
   List<bool> isEnabled = List.from([
     true,
     true,
-    !isWeb && bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y",
+    // tsconnect build: no LAN discovery / device-group tabs on desktop.
+    !isWeb &&
+        !isDesktop &&
+        bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y",
     !(bind.isDisableAb() || bind.isDisableAccount()),
-    !(bind.isDisableGroupPanel() || bind.isDisableAccount()),
+    !isDesktop &&
+        !(bind.isDisableGroupPanel() || bind.isDisableAccount()),
   ]);
   final List<bool> _isVisible = List.filled(maxTabCount, true, growable: false);
   List<bool> get isVisibleEnabled => () {
@@ -52,8 +56,10 @@ class PeerTabModel with ChangeNotifier {
         }
         return list;
       }();
-  final List<int> orders =
-      List.generate(maxTabCount, (index) => index, growable: false);
+  // tsconnect build: address book first on desktop.
+  final List<int> orders = isDesktop
+      ? List.from([3, 0, 1, 2, 4], growable: false)
+      : List.generate(maxTabCount, (index) => index, growable: false);
   List<int> get visibleEnabledOrderedIndexs =>
       orders.where((e) => isVisibleEnabled[e]).toList();
   List<Peer> _selectedPeers = List.empty(growable: true);
@@ -109,8 +115,11 @@ class PeerTabModel with ChangeNotifier {
       debugPrint("failed to get peer tab order list: $e");
     }
     // init currentTab
-    _currentTab =
-        int.tryParse(bind.getLocalFlutterOption(k: kOptionPeerTabIndex)) ?? 0;
+    // tsconnect build: desktop always opens on the address book.
+    _currentTab = isDesktop
+        ? PeerTabIndex.ab.index
+        : int.tryParse(bind.getLocalFlutterOption(k: kOptionPeerTabIndex)) ??
+            0;
     if (_currentTab < 0 || _currentTab >= maxTabCount) {
       _currentTab = 0;
     }

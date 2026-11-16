@@ -267,6 +267,12 @@ impl<T: InvokeUiCM> ConnectionManager<T> {
             .unwrap()
             .retain(|_, c| !(c.disconnected && c.peer_id == client.peer_id));
         CLIENTS.write().unwrap().insert(id, client.clone());
+        #[cfg(windows)]
+        {
+            if authorized && !from_switch {
+                ts_toast(&ts_connect_text(&client));
+            }
+        }
         self.ui_handler.add_connection(&client);
     }
 
@@ -282,6 +288,18 @@ impl<T: InvokeUiCM> ConnectionManager<T> {
     }
 
     fn remove_connection(&self, id: i32, close: bool) {
+        #[cfg(windows)]
+        {
+            let was_active = CLIENTS
+                .read()
+                .unwrap()
+                .get(&id)
+                .map(|c| c.authorized && !c.disconnected)
+                .unwrap_or(false);
+            if was_active {
+                ts_toast("원격 접속이 끝났어요");
+            }
+        }
         if close {
             CLIENTS.write().unwrap().remove(&id);
         } else {
@@ -355,6 +373,41 @@ pub fn check_click_time(id: i32) {
     if let Some(client) = CLIENTS.read().unwrap().get(&id) {
         allow_err!(client.tx.send(Data::ClickTime(0)));
     };
+}
+
+/// tsconnect build: small, silent Windows notification for incoming sessions.
+#[cfg(windows)]
+fn ts_toast(text: &str) {
+    let text = text.to_owned();
+    std::thread::spawn(move || {
+        use tauri_winrt_notification::{Duration, Toast};
+        Toast::new(Toast::POWERSHELL_APP_ID)
+            .title("TS원격")
+            .text1(&text)
+            .sound(None)
+            .duration(Duration::Short)
+            .show()
+            .ok();
+    });
+}
+
+#[cfg(windows)]
+fn ts_connect_text(c: &Client) -> String {
+    let who = c.name.trim();
+    let what = if c.is_file_transfer {
+        "파일 전송으로 접속했어요"
+    } else if c.is_view_camera {
+        "카메라 보기로 접속했어요"
+    } else if c.is_terminal {
+        "터미널로 접속했어요"
+    } else {
+        "원격 접속했어요"
+    };
+    if who.is_empty() {
+        format!("누군가 {}", what)
+    } else {
+        format!("{}님이 {}", who, what)
+    }
 }
 
 #[inline]

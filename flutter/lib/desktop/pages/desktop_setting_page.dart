@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/ts_mode.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -273,9 +274,53 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     });
   }
 
+  // tsconnect build: a receive-only PC keeps its settings locked until an
+  // admin account logs in on it.
+  Widget _buildTsLocked(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_outline, size: 36, color: muted),
+              const SizedBox(height: 12),
+              const Text('설정이 잠겨 있어요',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Text('원격 받기 전용 PC예요.\n설정을 바꾸려면 관리자 로그인이 필요해요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: muted)),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => loginDialog(),
+                  child: const Text('관리자 로그인'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    return Obx(() => tsLocked ? _buildTsLocked(context) : _buildSettings(context));
+  }
+
+  Widget _buildSettings(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: _buildBlock(

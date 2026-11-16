@@ -9,6 +9,7 @@ import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
+import 'package:flutter_hbb/common/ts_mode.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
@@ -185,13 +186,51 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       color: Theme.of(context).scaffoldBackgroundColor,
       // tsconnect build: connecting out needs an account; receiving does not.
       child: Obx(() => gFFI.userModel.isLogin
-          ? ConnectionPage()
-          : _buildTsLoginGate(context)),
+          ? Column(children: [
+              _buildTsAccountBar(context),
+              Expanded(child: ConnectionPage()),
+            ])
+          : Column(children: [
+              Expanded(child: _buildTsLoginGate(context)),
+              if (!bind.isOutgoingOnly()) const Divider(height: 1),
+              if (!bind.isOutgoingOnly()) OnlineStatusWidget(),
+            ])),
+    );
+  }
+
+  Widget _buildTsAccountBar(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 12, top: 10),
+      child: Row(
+        children: [
+          Icon(Icons.account_circle_outlined, size: 18, color: muted),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Obx(() => Text(
+                  gFFI.userModel.accountLabelWithHandle,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13),
+                )),
+          ),
+          const SizedBox(width: 6),
+          TextButton(
+            onPressed: () => logOutConfirmDialog(),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 28),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('로그아웃', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildTsLoginGate(BuildContext context) {
     final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final receiveOnly = tsReceiveOnly;
     return Center(
       child: Container(
         width: 320,
@@ -203,22 +242,35 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 36, color: muted),
+            Icon(receiveOnly ? Icons.shield_outlined : Icons.lock_outline,
+                size: 36, color: muted),
             const SizedBox(height: 12),
-            const Text('원격 하기는 로그인 후 사용할 수 있어요',
+            Text(
+                receiveOnly
+                    ? '이 PC는 원격 받기 전용이에요'
+                    : '원격 하기는 로그인 후 사용할 수 있어요',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
-            Text('로그인하지 않아도 이 PC는 원격을 받을 수 있어요.\n계정은 관리자에게 받아 주세요.',
+            Text(
+                receiveOnly
+                    ? '관리자가 원격으로 도와드릴 수 있어요.\n설정을 바꾸려면 관리자 로그인이 필요해요.'
+                    : '로그인하지 않아도 이 PC는 원격을 받을 수 있어요.\n계정은 관리자에게 받아 주세요.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: muted)),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => loginDialog(),
-                child: const Text('로그인'),
-              ),
+              child: receiveOnly
+                  ? OutlinedButton(
+                      onPressed: () => loginDialog(),
+                      child: const Text('관리자 로그인'),
+                    )
+                  : ElevatedButton(
+                      onPressed: () => loginDialog(),
+                      child: const Text('로그인'),
+                    ),
             ),
           ],
         ),

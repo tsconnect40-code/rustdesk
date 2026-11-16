@@ -69,6 +69,12 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   final RxBool startmenu = true.obs;
   final RxBool desktopicon = true.obs;
   final RxBool printer = false.obs;
+  // tsconnect build: receive-only install (unattended access).
+  final RxBool receiveOnly = false.obs;
+  final RxString receiveOnlyError = ''.obs;
+  final pcNameCtrl = TextEditingController();
+  final pwCtrl = TextEditingController();
+  final pw2Ctrl = TextEditingController();
   final RxBool showProgress = false.obs;
   final RxBool btnEnabled = true.obs;
   final RxBool cancelEnabled = true.obs;
@@ -118,6 +124,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   @override
   void dispose() {
+    pcNameCtrl.dispose();
+    pwCtrl.dispose();
+    pw2Ctrl.dispose();
     windowManager.removeListener(this);
     super.dispose();
   }
@@ -211,7 +220,13 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                   .marginOnly(bottom: 7),
               Option(desktopicon, label: 'Create desktop icon')
                   .marginOnly(bottom: 7),
-              Option(printer, label: 'Install {$appName} Printer'),
+              Option(printer, label: 'Install {$appName} Printer')
+                  .marginOnly(bottom: 7),
+              Option(receiveOnly,
+                  label: '원격 받기 전용으로 설치 (부모님·사무실 PC처럼 사람이 없어도 접속)'),
+              Obx(() => receiveOnly.value
+                  ? _buildReceiveOnlyFields(em)
+                  : const Offstage()),
               Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -297,8 +312,77 @@ class _InstallPageBodyState extends State<_InstallPageBody>
         ));
   }
 
+  Widget _buildReceiveOnlyFields(double em) {
+    InputDecoration deco(String label, [String? hint]) => InputDecoration(
+          labelText: label,
+          hintText: hint,
+          isDense: true,
+          contentPadding: EdgeInsets.all(0.75 * em),
+        );
+    return Container(
+      margin: EdgeInsets.only(left: 28, top: 8),
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: pcNameCtrl,
+            maxLength: 40,
+            decoration: deco('PC 이름', '예: 엄마 PC'),
+          ),
+          TextField(
+            controller: pwCtrl,
+            obscureText: true,
+            decoration: deco('영구 비밀번호 (6자 이상)'),
+          ).marginOnly(bottom: 8),
+          TextField(
+            controller: pw2Ctrl,
+            obscureText: true,
+            decoration: deco('영구 비밀번호 확인'),
+          ).marginOnly(bottom: 6),
+          Text(
+            '원격 접속할 때 이 비밀번호를 넣으면 수락 없이 바로 연결돼요. 잊지 않게 따로 적어 두세요.\n'
+            '이 PC의 설정은 잠기고, 관리자 계정으로 로그인해야 바꿀 수 있어요.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          Obx(() => receiveOnlyError.value.isEmpty
+              ? const Offstage()
+              : Text(receiveOnlyError.value,
+                      style: const TextStyle(color: Colors.red, fontSize: 12))
+                  .marginOnly(top: 6)),
+        ],
+      ),
+    );
+  }
+
+  /// Returns false (and shows why) when the receive-only fields are not valid.
+  bool _applyReceiveOnly() {
+    if (!receiveOnly.value) return true;
+    receiveOnlyError.value = '';
+    final name = pcNameCtrl.text.trim();
+    final pw = pwCtrl.text;
+    if (name.isEmpty) {
+      receiveOnlyError.value = 'PC 이름을 넣어 주세요.';
+      return false;
+    }
+    if (pw.length < 6) {
+      receiveOnlyError.value = '영구 비밀번호는 6자 이상으로 넣어 주세요.';
+      return false;
+    }
+    if (pw != pw2Ctrl.text) {
+      receiveOnlyError.value = '비밀번호 확인이 맞지 않아요.';
+      return false;
+    }
+    if (!bind.mainTsPrepareReceiveOnly(password: pw, pcName: name)) {
+      receiveOnlyError.value = '비밀번호를 저장하지 못했어요. 다시 시도해 주세요.';
+      return false;
+    }
+    return true;
+  }
+
   Future<void> install() async {
     if (!btnEnabled.value) return;
+    if (!_applyReceiveOnly()) return;
     final installPath = controller.text;
     do_install() {
       btnEnabled.value = false;
