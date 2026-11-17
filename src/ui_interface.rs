@@ -473,7 +473,21 @@ pub fn set_option(key: String, value: String) {
                 return;
             }
         }
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        // tsconnect build: on Windows "stop" only pauses waiting for
+        // connections (the service stays installed; the option makes the
+        // rendezvous mediator go offline). "Start" resumes, and reinstalls
+        // the service only if it is missing.
+        #[cfg(target_os = "windows")]
+        {
+            if crate::platform::is_installed()
+                && value != "Y"
+                && !crate::platform::windows::is_self_service_running()
+            {
+                crate::platform::install_service();
+                return;
+            }
+        }
+        #[cfg(target_os = "linux")]
         {
             if crate::platform::is_installed() {
                 if value == "Y" {

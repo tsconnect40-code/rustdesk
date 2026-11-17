@@ -317,7 +317,12 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Obx(() => tsLocked ? _buildTsLocked(context) : _buildSettings(context));
+    // Obx must read an observable on every build, so only wrap the
+    // receive-only case (where the login state decides the lock).
+    if (!tsReceiveOnly) return _buildSettings(context);
+    return Obx(() => gFFI.userModel.userName.value.isEmpty
+        ? _buildTsLocked(context)
+        : _buildSettings(context));
   }
 
   Widget _buildSettings(BuildContext context) {

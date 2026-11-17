@@ -222,11 +222,22 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                   .marginOnly(bottom: 7),
               Option(printer, label: 'Install {$appName} Printer')
                   .marginOnly(bottom: 7),
+              _buildTsFields(em),
               Option(receiveOnly,
                   label: '원격 받기 전용으로 설치 (부모님·사무실 PC처럼 사람이 없어도 접속)'),
               Obx(() => receiveOnly.value
-                  ? _buildReceiveOnlyFields(em)
+                  ? Text(
+                      '비밀번호가 꼭 필요해요. 접속은 비밀번호로만 되고(수락 창 없음), '
+                      '이 PC의 설정은 관리자 계정으로 로그인해야 바꿀 수 있어요.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ).marginOnly(left: 28, top: 4)
                   : const Offstage()),
+              Obx(() => receiveOnlyError.value.isEmpty
+                  ? const Offstage()
+                  : Text(receiveOnlyError.value,
+                          style:
+                              const TextStyle(color: Colors.red, fontSize: 12))
+                      .marginOnly(top: 6)),
               Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -312,7 +323,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
         ));
   }
 
-  Widget _buildReceiveOnlyFields(double em) {
+  // tsconnect build: PC name and permanent password for every install
+  // (optional), required when installing as receive-only.
+  Widget _buildTsFields(double em) {
     InputDecoration deco(String label, [String? hint]) => InputDecoration(
           labelText: label,
           hintText: hint,
@@ -320,7 +333,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
           contentPadding: EdgeInsets.all(0.75 * em),
         );
     return Container(
-      margin: EdgeInsets.only(left: 28, top: 8),
+      margin: const EdgeInsets.only(top: 4, bottom: 10),
       constraints: const BoxConstraints(maxWidth: 420),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,12 +341,12 @@ class _InstallPageBodyState extends State<_InstallPageBody>
           TextField(
             controller: pcNameCtrl,
             maxLength: 40,
-            decoration: deco('PC 이름', '예: 엄마 PC'),
+            decoration: deco('PC 이름 (선택)', '예: 엄마 PC, 사무실 PC'),
           ),
           TextField(
             controller: pwCtrl,
             obscureText: true,
-            decoration: deco('영구 비밀번호 (6자 이상)'),
+            decoration: deco('영구 비밀번호 (선택 · 6자 이상)'),
           ).marginOnly(bottom: 8),
           TextField(
             controller: pw2Ctrl,
@@ -341,31 +354,30 @@ class _InstallPageBodyState extends State<_InstallPageBody>
             decoration: deco('영구 비밀번호 확인'),
           ).marginOnly(bottom: 6),
           Text(
-            '원격 접속할 때 이 비밀번호를 넣으면 수락 없이 바로 연결돼요. 잊지 않게 따로 적어 두세요.\n'
-            '이 PC의 설정은 잠기고, 관리자 계정으로 로그인해야 바꿀 수 있어요.',
+            'PC 이름은 주소록과 관리 화면에 보이는 이름이에요. 비우면 컴퓨터 이름을 써요.\n'
+            '비밀번호를 넣으면 사람이 없어도 이 비밀번호로 접속할 수 있어요. 비우면 매번 수락해야 해요.',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
-          Obx(() => receiveOnlyError.value.isEmpty
-              ? const Offstage()
-              : Text(receiveOnlyError.value,
-                      style: const TextStyle(color: Colors.red, fontSize: 12))
-                  .marginOnly(top: 6)),
         ],
       ),
     );
   }
 
-  /// Returns false (and shows why) when the receive-only fields are not valid.
-  bool _applyReceiveOnly() {
-    if (!receiveOnly.value) return true;
+  /// Returns false (and shows why) when the name/password fields are not valid.
+  bool _applyTsFields() {
     receiveOnlyError.value = '';
     final name = pcNameCtrl.text.trim();
     final pw = pwCtrl.text;
-    if (name.isEmpty) {
-      receiveOnlyError.value = 'PC 이름을 넣어 주세요.';
+    final ro = receiveOnly.value;
+    if (ro && name.isEmpty) {
+      receiveOnlyError.value = '받기 전용 PC는 PC 이름을 넣어 주세요.';
       return false;
     }
-    if (pw.length < 6) {
+    if (ro && pw.isEmpty) {
+      receiveOnlyError.value = '받기 전용 PC는 영구 비밀번호가 필요해요.';
+      return false;
+    }
+    if (pw.isNotEmpty && pw.length < 6) {
       receiveOnlyError.value = '영구 비밀번호는 6자 이상으로 넣어 주세요.';
       return false;
     }
@@ -373,7 +385,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
       receiveOnlyError.value = '비밀번호 확인이 맞지 않아요.';
       return false;
     }
-    if (!bind.mainTsPrepareReceiveOnly(password: pw, pcName: name)) {
+    if (name.isEmpty && pw.isEmpty && !ro) return true;
+    if (!bind.mainTsPrepareReceiveOnly(
+        password: pw, pcName: name, receiveOnly: ro)) {
       receiveOnlyError.value = '비밀번호를 저장하지 못했어요. 다시 시도해 주세요.';
       return false;
     }
@@ -382,7 +396,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   Future<void> install() async {
     if (!btnEnabled.value) return;
-    if (!_applyReceiveOnly()) return;
+    if (!_applyTsFields()) return;
     final installPath = controller.text;
     do_install() {
       btnEnabled.value = false;

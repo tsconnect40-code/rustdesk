@@ -2474,28 +2474,44 @@ pub fn install_install_me(options: String, path: String) {
 /// tsconnect build: receive-only install.
 /// Writes the permanent password and options straight into this user's config;
 /// the installer copies that config into the service (--import-config).
-pub fn main_ts_prepare_receive_only(password: String, pc_name: String) -> SyncReturn<bool> {
+/// tsconnect build: called by the installer before installing.
+/// Empty password / name leave the current values alone (normal install);
+/// receive-only additionally switches the PC to password-only access.
+pub fn main_ts_prepare_receive_only(
+    password: String,
+    pc_name: String,
+    receive_only: bool,
+) -> SyncReturn<bool> {
     #[cfg(windows)]
     {
         use hbb_common::config::Config as TsConfig;
-        if password.chars().count() < 6 || !TsConfig::set_permanent_password(&password) {
+        if receive_only && password.is_empty() {
             return SyncReturn(false);
         }
-        for (k, v) in [
-            ("ts-receive-only", "Y"),
-            ("approve-mode", "password"),
-            ("verification-method", "use-permanent-password"),
-            ("allow-hide-cm", "Y"),
-        ] {
-            TsConfig::set_option(k.to_owned(), v.to_owned());
+        if !password.is_empty()
+            && (password.chars().count() < 6 || !TsConfig::set_permanent_password(&password))
+        {
+            return SyncReturn(false);
+        }
+        if receive_only {
+            for (k, v) in [
+                ("ts-receive-only", "Y"),
+                ("approve-mode", "password"),
+                ("verification-method", "use-permanent-password"),
+                ("allow-hide-cm", "Y"),
+            ] {
+                TsConfig::set_option(k.to_owned(), v.to_owned());
+            }
         }
         let name: String = pc_name.trim().chars().take(40).collect();
-        TsConfig::set_option("preset-address-book-alias".to_owned(), name);
+        if !name.is_empty() {
+            TsConfig::set_option("preset-address-book-alias".to_owned(), name);
+        }
         return SyncReturn(true);
     }
     #[cfg(not(windows))]
     {
-        let _ = (password, pc_name);
+        let _ = (password, pc_name, receive_only);
         return SyncReturn(false);
     }
 }

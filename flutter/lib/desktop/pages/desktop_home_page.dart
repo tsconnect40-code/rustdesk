@@ -46,6 +46,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var systemError = '';
   StreamSubscription? _uniLinksSubscription;
   var svcStopped = false.obs;
+  bool _tsResumeChecked = false;
   var watchIsCanScreenRecording = false;
   var watchIsProcessTrust = false;
   var watchIsInputMonitoring = false;
@@ -809,6 +810,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         setState(() {});
       }
       final v = await mainGetBoolOption(kOptionStopService);
+      // tsconnect build: opening the app turns "waiting for connections"
+      // back on (the tray only pauses it, it never removes the service).
+      if (!_tsResumeChecked) {
+        _tsResumeChecked = true;
+        if (v && isWindows) {
+          await bind.mainSetOption(key: kOptionStopService, value: '');
+        }
+      }
       if (v != svcStopped.value) {
         svcStopped.value = v;
         setState(() {});

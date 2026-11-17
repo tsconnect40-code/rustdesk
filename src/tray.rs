@@ -69,8 +69,28 @@ fn make_tray() -> hbb_common::ResultType<()> {
     ) == "Y";
     // The tray icon is only shown when the service is running, so we don't need to check
     // the `stop-service` option here.
+    // tsconnect build (Windows): the item pauses/resumes waiting for
+    // connections instead of removing the service.
+    #[cfg(windows)]
+    let ts_pause_label = |paused: bool| {
+        if paused {
+            "원격 대기 켜기"
+        } else {
+            "원격 대기 끄기 (다시 열면 켜져요)"
+        }
+    };
+    #[cfg(windows)]
+    let quit_text = ts_pause_label(
+        crate::ipc::get_options()
+            .get("stop-service")
+            .map(|v| v == "Y")
+            .unwrap_or(false),
+    )
+    .to_owned();
+    #[cfg(not(windows))]
+    let quit_text = translate("Stop service".to_owned());
     let quit_i = if !hide_stop_service {
-        Some(MenuItem::new(translate("Stop service".to_owned()), true, None))
+        Some(MenuItem::new(quit_text, true, None))
     } else {
         None
     };
@@ -189,6 +209,18 @@ fn make_tray() -> hbb_common::ResultType<()> {
 
         if let Ok(event) = menu_channel.try_recv() {
             if let Some(quit_i) = &quit_i {
+                #[cfg(windows)]
+                if event.id == quit_i.id() {
+                    let paused = crate::ipc::get_options()
+                        .get("stop-service")
+                        .map(|v| v == "Y")
+                        .unwrap_or(false);
+                    crate::ipc::set_option("stop-service", if paused { "" } else { "Y" });
+                    quit_i.set_text(ts_pause_label(!paused));
+                } else if event.id == open_i.id() {
+                    open_func();
+                }
+                #[cfg(not(windows))]
                 if event.id == quit_i.id() {
                     /* failed in windows, seems no permission to check system process
                     if !crate::check_process("--server", false) {

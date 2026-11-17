@@ -380,6 +380,10 @@ pub fn core_main() -> Option<CoreMainAction> {
             return None;
         } else if args[0] == "--service" {
             log::info!("start --service");
+            // tsconnect build: a pause from the tray lasts until the app is
+            // opened again or the PC restarts.
+            #[cfg(windows)]
+            hbb_common::config::Config::set_option("stop-service".into(), "".into());
             crate::start_os_service();
             return None;
         } else if args[0] == "--server" {
