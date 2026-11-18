@@ -232,6 +232,17 @@ class TsThreeFinger {
   void Function(TsThreeAction a)? onAction;
 
   int get activeCount => _start.length;
+
+  // Two fingers held still briefly -> canvas move mode (armed).
+  bool twoHoldArmed = false;
+  Timer? _twoTimer;
+  final Map<int, Offset> _twoBase = {};
+
+  void _twoReset() {
+    _twoTimer?.cancel();
+    _twoTimer = null;
+    _twoBase.clear();
+  }
   bool get recentlyMulti => _nowMs() - lastMultiMs < 450;
 
   void down(PointerDownEvent e) {
@@ -246,6 +257,19 @@ class TsThreeFinger {
     _pos[e.pointer] = e.position;
     _maxCount = max(_maxCount, _start.length);
     if (_start.length >= 3) lastMultiMs = _nowMs();
+    _twoReset();
+    if (_start.length == 2 && !twoHoldArmed) {
+      _twoBase.addAll(_pos);
+      _twoTimer = Timer(const Duration(milliseconds: 300), () {
+        _twoTimer = null;
+        if (_start.length == 2) {
+          twoHoldArmed = true;
+          TsTouch.haptic();
+        }
+      });
+    } else if (_start.length >= 3) {
+      twoHoldArmed = false;
+    }
   }
 
   Offset _avgDelta() {
@@ -261,6 +285,10 @@ class TsThreeFinger {
     if (s == null) return;
     _pos[e.pointer] = e.position;
     _maxMove = max(_maxMove, (e.position - s).distance);
+    final b = _twoBase[e.pointer];
+    if (_twoTimer != null && b != null && (e.position - b).distance > 12) {
+      _twoReset();
+    }
     if (_start.length >= 3) lastMultiMs = _nowMs();
     if (_maxCount == 3 && _start.length == 3 && !_fired) {
       final d = _avgDelta();
@@ -280,7 +308,9 @@ class TsThreeFinger {
     if (!_start.containsKey(e.pointer)) return;
     _start.remove(e.pointer);
     _pos.remove(e.pointer);
+    _twoReset();
     if (_start.isNotEmpty) return;
+    twoHoldArmed = false;
     if (_maxCount >= 3) lastMultiMs = _nowMs();
     if (!cancel &&
         _maxCount == 3 &&
@@ -294,6 +324,8 @@ class TsThreeFinger {
   void cancelAll() {
     _start.clear();
     _pos.clear();
+    _twoReset();
+    twoHoldArmed = false;
   }
 }
 

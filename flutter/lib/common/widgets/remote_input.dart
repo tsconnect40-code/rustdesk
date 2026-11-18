@@ -122,7 +122,7 @@ class _RawTouchGestureDetectorRegionState
   late final TsScroller _tsScroll = TsScroller(ffi);
   final TsPointerAccel _tsAccel = TsPointerAccel();
   final TsThreeFinger _tsThree = TsThreeFinger();
-  int _tsTwoMode = 0; // 0 undecided, 1 scroll, 2 zoom
+  int _tsTwoMode = 0; // 0 undecided, 1 scroll, 2 zoom, 3 canvas move
   Offset _tsTwoAccum = Offset.zero;
   bool get _tsMobile => isMobile && !ffiModel.isPeerAndroid;
   bool get _tsSuppress => isMobile && _tsThree.recentlyMulti;
@@ -527,7 +527,11 @@ class _RawTouchGestureDetectorRegionState
       if (_tsThree.activeCount >= 3) return;
       if (_tsTwoMode == 0) {
         _tsTwoAccum += d.focalPointDelta;
-        if ((d.scale - 1).abs() > 0.08) {
+        if (_tsThree.twoHoldArmed) {
+          // held still ~0.3s first: move/zoom the canvas, no PC scroll
+          _tsTwoMode = 3;
+          _scale = d.scale;
+        } else if ((d.scale - 1).abs() > 0.08) {
           _tsTwoMode = 2;
           _scale = 1;
         } else if (_tsTwoAccum.distance > 14) {

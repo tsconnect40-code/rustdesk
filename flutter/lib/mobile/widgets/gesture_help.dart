@@ -310,6 +310,8 @@ class _GestureHelpState extends State<GestureHelp> {
             '두 손가락 위아래 · 좌우', '스크롤'),
         GestureInfo(
             width, GestureIcons.iconGesturePinch, '벌리기 · 모으기', '화면 확대'),
+        GestureInfo(width, GestureIcons.iconGesturePressHold,
+            '두 손가락 대고 잠깐 멈춘 뒤 끌기', '화면 이동'),
         GestureInfo(width, GestureIcons.iconGestureFTap_, '세 손가락 탭',
             '키보드 열기/닫기'),
         GestureInfo(width, GestureIcons.iconGestureFThreeFingers,
