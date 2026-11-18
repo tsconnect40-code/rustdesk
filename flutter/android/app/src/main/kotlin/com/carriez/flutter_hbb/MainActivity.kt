@@ -15,6 +15,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.ClipboardManager
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.Build
 import android.os.IBinder
@@ -245,6 +246,40 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // TS원격: keep Android's back-swipe from stealing touches at the screen
+    // edges while a remote session is open (system limit: 200dp per edge).
+    private var tsEdgeGuard = false
+    private var tsEdgeListenerAdded = false
+
+    private fun applyTsEdgeGuard() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val v = window.decorView
+        if (!tsEdgeListenerAdded) {
+            tsEdgeListenerAdded = true
+            v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> setTsEdgeRects() }
+        }
+        v.post { setTsEdgeRects() }
+    }
+
+    private fun setTsEdgeRects() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val v = window.decorView
+        if (!tsEdgeGuard || v.width == 0 || v.height == 0) {
+            if (v.systemGestureExclusionRects.isNotEmpty()) {
+                v.systemGestureExclusionRects = emptyList()
+            }
+            return
+        }
+        val d = resources.displayMetrics.density
+        val w = (32 * d).toInt()
+        val h = minOf((200 * d).toInt(), v.height)
+        val top = (v.height - h) / 2
+        v.systemGestureExclusionRects = listOf(
+            Rect(0, top, w, top + h),
+            Rect(v.width - w, top, v.width, top + h)
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (_rdClipboardManager == null) {
@@ -387,6 +422,11 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(true)
 
+                }
+                "ts_edge_guard" -> {
+                    tsEdgeGuard = call.arguments as? Boolean ?: false
+                    applyTsEdgeGuard()
+                    result.success(true)
                 }
                 "try_sync_clipboard" -> {
                     rdClipboardManager?.syncClipboard(true)

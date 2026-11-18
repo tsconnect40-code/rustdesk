@@ -4,6 +4,7 @@ import 'package:flutter_hbb/models/input_model.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:get/get.dart';
 import 'package:toggle_switch/toggle_switch.dart';
+import 'package:flutter_hbb/common/widgets/ts_touch.dart';
 
 class GestureIcons {
   static const String _family = 'gestureicons';
@@ -272,6 +273,7 @@ class _GestureHelpState extends State<GestureHelp> {
                                     ],
                                   )),
                             )),
+                      _tsSettings(context),
                     ],
                   ),
                 ),
@@ -281,72 +283,93 @@ class _GestureHelpState extends State<GestureHelp> {
                   runSpacing: 2 * space,
                   children: _touchMode
                       ? [
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconMobileTouch,
-                              translate("One-Finger Tap"),
-                              translate("Left Mouse")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGesturePressHold,
-                              translate("One-Long Tap"),
-                              translate("Right Mouse")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFSwipeRight,
-                              translate("One-Finger Move"),
-                              translate("Mouse Drag")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFThreeFingers,
-                              translate("Three-Finger vertically"),
-                              translate("Mouse Wheel")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFDrag,
-                              translate("Two-Finger Move"),
-                              translate("Canvas Move")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGesturePinch,
-                              translate("Pinch to Zoom"),
-                              translate("Canvas Zoom")),
+                          GestureInfo(width, GestureIcons.iconMobileTouch,
+                              '한 손가락 탭', '왼쪽 클릭'),
+                          GestureInfo(width, GestureIcons.iconGesturePressHold,
+                              '길게 누르기', '오른쪽 클릭'),
+                          GestureInfo(width, GestureIcons.iconGestureFSwipeRight,
+                              '한 손가락 이동', '드래그'),
+                          ..._tsCommonCards(width),
                         ]
                       : [
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconMobileTouch,
-                              translate("One-Finger Tap"),
-                              translate("Left Mouse")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGesturePressHold,
-                              translate("One-Long Tap"),
-                              translate("Right Mouse")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFSwipeRight,
-                              translate("Double Tap & Move"),
-                              translate("Mouse Drag")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFThreeFingers,
-                              translate("Three-Finger vertically"),
-                              translate("Mouse Wheel")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGestureFDrag,
-                              translate("Two-Finger Move"),
-                              translate("Canvas Move")),
-                          GestureInfo(
-                              width,
-                              GestureIcons.iconGesturePinch,
-                              translate("Pinch to Zoom"),
-                              translate("Canvas Zoom")),
+                          GestureInfo(width, GestureIcons.iconMobileTouch,
+                              '한 손가락 탭', '왼쪽 클릭'),
+                          GestureInfo(width, GestureIcons.iconGesturePressHold,
+                              '길게 누르기 · 두 손가락 탭', '오른쪽 클릭'),
+                          GestureInfo(width, GestureIcons.iconGestureFdoubleTap,
+                              '두 번 탭 후 끌기', '드래그'),
+                          ..._tsCommonCards(width),
                         ],
                 )),
               ],
             )));
+  }
+
+  List<Widget> _tsCommonCards(double width) => [
+        GestureInfo(width, GestureIcons.iconGestureFDragUpDown_,
+            '두 손가락 위아래 · 좌우', '스크롤'),
+        GestureInfo(
+            width, GestureIcons.iconGesturePinch, '벌리기 · 모으기', '화면 확대'),
+        GestureInfo(width, GestureIcons.iconGestureFTap_, '세 손가락 탭',
+            '키보드 열기/닫기'),
+        GestureInfo(width, GestureIcons.iconGestureFThreeFingers,
+            '세 손가락 좌우', '창 전환 (Alt+Tab)'),
+        GestureInfo(width, GestureIcons.iconGestureFThreeFingers,
+            '세 손가락 위로', '작업 보기 (Win+Tab)'),
+        GestureInfo(width, GestureIcons.iconGestureFThreeFingers,
+            '세 손가락 아래로', '바탕화면 (Win+D)'),
+      ];
+
+  Widget _tsSettings(BuildContext context) {
+    TsTouch.load();
+    return SizedBox(
+      width: 300,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!_touchMode)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('마우스 속도 ${TsTouch.speed}%'),
+            ),
+          if (!_touchMode)
+            Row(children: [
+              const Text('느리게'),
+              Expanded(
+                child: Slider(
+                  value: TsTouch.speed.toDouble(),
+                  min: kTsTouchSpeedMin.toDouble(),
+                  max: kTsTouchSpeedMax.toDouble(),
+                  divisions: (kTsTouchSpeedMax - kTsTouchSpeedMin) ~/ 10,
+                  onChanged: (v) => setState(() => TsTouch.setSpeed(v.round())),
+                ),
+              ),
+              const Text('빠르게'),
+            ]),
+          Transform.translate(
+            offset: const Offset(-10.0, 0.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: TsTouch.palmReject,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => TsTouch.setPalmReject(v));
+                  },
+                ),
+                InkWell(
+                  onTap: () =>
+                      setState(() => TsTouch.setPalmReject(!TsTouch.palmReject)),
+                  child: const Text('손바닥 닿음 무시 (태블릿)'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -18,6 +18,7 @@ import '../../common.dart';
 import '../../common/widgets/overlay.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/remote_input.dart';
+import '../../common/widgets/ts_touch.dart';
 import '../../models/input_model.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
@@ -105,6 +106,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   final FocusNode _mobileFocusNode = FocusNode();
   final FocusNode _physicalFocusNode = FocusNode();
   var _showEdit = false; // use soft keyboard
+  var _showTsKeys = false; // TS원격 shortcut bar
 
   Worker? _waylandKeyboardGateWorker;
   bool _waylandKeyboardGateInitialized = false;
@@ -170,6 +172,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       }
     });
     WidgetsBinding.instance.addObserver(this);
+    TsTouch.toggleKeyboard = _tsToggleKeyboard;
+    if (isAndroid) gFFI.invokeMethod("ts_edge_guard", true);
 
     inputModel.keyboardInputAllowed = true;
 
@@ -189,6 +193,10 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   @override
   Future<void> dispose() async {
     _androidKeyboardQueue?.close();
+    if (TsTouch.toggleKeyboard == _tsToggleKeyboard) {
+      TsTouch.toggleKeyboard = null;
+    }
+    if (isAndroid) gFFI.invokeMethod("ts_edge_guard", false);
     HardwareKeyboard.instance.removeHandler(_handleLocalKeyEvent);
     WidgetsBinding.instance.removeObserver(this);
     // Close the session up-front. `gFFI.close()` below only calls `sessionClose`
@@ -488,8 +496,29 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget _bottomWidget() => _showGestureHelp
       ? getGestureHelp()
       : (_showBar && gFFI.ffiModel.pi.displays.isNotEmpty
-          ? getBottomAppBar()
+          ? (_showTsKeys
+              ? Column(mainAxisSize: MainAxisSize.min, children: [
+                  TsShortcutBar(inputModel: inputModel),
+                  getBottomAppBar(),
+                ])
+              : getBottomAppBar())
           : Offstage());
+
+  // Three-finger tap: open or close the soft keyboard.
+  void _tsToggleKeyboard() {
+    if (!mounted) return;
+    if (gFFI.ffiModel.viewOnly || !gFFI.ffiModel.keyboard) return;
+    if (keyboardVisibilityController.isVisible && _showEdit) {
+      setState(() {
+        _showEdit = false;
+        gFFI.invokeMethod("enable_soft_keyboard", false);
+        _mobileFocusNode.unfocus();
+        _physicalFocusNode.requestFocus();
+      });
+    } else {
+      openKeyboard();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -659,6 +688,15 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                                     : Icons.mouse),
                                 onPressed: () => setState(
                                     () => _showGestureHelp = !_showGestureHelp),
+                              ),
+                              IconButton(
+                                color: _showTsKeys
+                                    ? Colors.yellowAccent
+                                    : Colors.white,
+                                tooltip: '단축키',
+                                icon: const Icon(Icons.bolt),
+                                onPressed: () => setState(
+                                    () => _showTsKeys = !_showTsKeys),
                               ),
                             ]) +
                   (isWeb
