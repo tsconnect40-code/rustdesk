@@ -911,11 +911,11 @@ Future<List<TRadioMenu<String>>> toolbarCodec(
   // tsconnect build: a short note after each codec name.
   const tsCodecNotes = {
     'auto': '상황에 맞게 자동 선택',
-    'vp8': '가벼움 · 화질 낮음',
-    'vp9': '문서·글자 작업 추천 · 트루컬러(4:4:4) 지원',
-    'av1': '글자 선명 · 데이터 적음 · CPU 많이 씀',
-    'h264': '그래픽카드 사용 · 영상·게임에 부드러움',
-    'h265': 'H264보다 데이터 적음 · 그래픽카드 사용',
+    'vp8': 'CPU | 가장 가볍지만 화질이 낮아요',
+    'vp9': 'CPU | 화질과 부담의 균형, 글자가 깨끗해요 (문서 작업 추천)',
+    'av1': 'CPU | 화질이 가장 좋지만 CPU를 가장 많이 써요',
+    'h264': '그래픽카드 | CPU를 거의 안 써요, 영상·게임에 부드러워요',
+    'h265': '그래픽카드 | H264보다 데이터를 덜 써요',
   };
   TRadioMenu<String> radio(
       String label, String value, bool enabled, String actionId) {
