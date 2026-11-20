@@ -908,10 +908,27 @@ Future<List<TRadioMenu<String>>> toolbarCodec(
     bind.sessionChangePreferCodec(sessionId: sessionId);
   }
 
+  // tsconnect build: a short note after each codec name.
+  const tsCodecNotes = {
+    'auto': '상황에 맞게 자동 선택',
+    'vp8': '가벼움 · 화질 낮음',
+    'vp9': '문서·글자 작업 추천 · 트루컬러(4:4:4) 지원',
+    'av1': '글자 선명 · 데이터 적음 · CPU 많이 씀',
+    'h264': '그래픽카드 사용 · 영상·게임에 부드러움',
+    'h265': 'H264보다 데이터 적음 · 그래픽카드 필요',
+  };
   TRadioMenu<String> radio(
       String label, String value, bool enabled, String actionId) {
+    final note = tsCodecNotes[value];
     return TRadioMenu<String>(
-        child: Text(label),
+        child: note == null
+            ? Text(label)
+            : Text.rich(TextSpan(children: [
+                TextSpan(text: label),
+                TextSpan(
+                    text: '   $note',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ])),
         value: value,
         groupValue: groupValue,
         onChanged: enabled ? onChanged : null,

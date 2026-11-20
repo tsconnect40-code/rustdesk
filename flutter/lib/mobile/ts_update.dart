@@ -1,5 +1,5 @@
 // tsconnect build: check our own server for a newer TS원격 APK.
-// The build number is baked in at build time (--dart-define=TS_BUILD=<run number>).
+// The build number is baked in at build time (--dart-define=TS_BUILD=<number in the TS_BUILD file>).
 import 'dart:async';
 import 'dart:convert';
 

@@ -1,6 +1,6 @@
 # tsconnect custom Windows build ("TS원격", app name TSRemote): official 1.5.3 + our server baked in,
 # installs beside the official RustDesk, outgoing connections need login, update notice from rd.tsconnect.kr.
-# x64 only, unsigned. Output: TSRemote-<ver>-b<run>-install.exe (the "-install.exe" suffix opens the installer).
+# x64 only, unsigned. Output: TSRemote-<ver>-b<TS_BUILD>-install.exe (the "-install.exe" suffix opens the installer).
 name: TS Windows build
 
 # Manual only (Actions tab > TS Windows build > Run workflow, branch ts-main):
@@ -34,7 +34,6 @@ jobs:
     runs-on: windows-2022
     env:
       TARGET: x86_64-pc-windows-msvc
-      TS_BUILD: ${{ github.run_number }}
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
@@ -47,6 +46,15 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Read TS build number
+        shell: bash
+        run: |
+          # One number for PC and phone, from the TS_BUILD file (bumped per release).
+          n=$(tr -dc '0-9' < TS_BUILD)
+          test -n "$n"
+          echo "TS_BUILD=$n" >> "$GITHUB_ENV"
+          echo "TS build b$n"
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
