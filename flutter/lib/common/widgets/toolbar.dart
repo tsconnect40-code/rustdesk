@@ -914,8 +914,8 @@ Future<List<TRadioMenu<String>>> toolbarCodec(
     'vp8': '가벼움 · 화질 낮음',
     'vp9': '문서·글자 작업 추천 · 트루컬러(4:4:4) 지원',
     'av1': '글자 선명 · 데이터 적음 · CPU 많이 씀',
-    'h264': '하드웨어 가속(내장 그래픽 포함) · 영상·게임에 부드러움',
-    'h265': 'H264보다 데이터 적음 · 최근 PC만 지원',
+    'h264': '그래픽카드 사용 · 영상·게임에 부드러움',
+    'h265': 'H264보다 데이터 적음 · 그래픽카드 사용',
   };
   TRadioMenu<String> radio(
       String label, String value, bool enabled, String actionId) {
