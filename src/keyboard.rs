@@ -1333,14 +1333,33 @@ fn windows_peer_special_key(peer: &str, event: &Event) -> Option<KeyEvent> {
     };
     #[cfg(not(target_os = "windows"))]
     let is_pause = key == Key::Pause;
-    if !is_pause {
+
+    // tsconnect build: Korean 한/영 and 한자 keys. Korean keyboards produce them
+    // with different scan codes (dedicated key, or Right Alt / Right Ctrl when the
+    // keyboard type is 101-key type 2/3), so sending the position only toggles the
+    // remote IME when both PCs use the same keyboard type. Send the virtual key
+    // instead (VK_HANGUL 0x15 / VK_HANJA 0x19), which the remote IME always obeys.
+    #[cfg(target_os = "windows")]
+    let korean_key = match event.platform_code {
+        0x15 => Some(ControlKey::Hangul),
+        0x19 => Some(ControlKey::Hanja),
+        _ => None,
+    };
+    #[cfg(not(target_os = "windows"))]
+    let korean_key: Option<ControlKey> = None;
+
+    let control_key = if is_pause {
+        ControlKey::Pause
+    } else if let Some(k) = korean_key {
+        k
+    } else {
         return None;
-    }
+    };
 
     let mut key_event = KeyEvent::new();
     key_event.mode = KeyboardMode::Legacy.into();
     key_event.down = down;
-    key_event.set_control_key(ControlKey::Pause);
+    key_event.set_control_key(control_key);
     let (alt, ctrl, shift, command) = client::get_modifiers_state(false, false, false, false);
     client::legacy_modifiers(&mut key_event, alt, ctrl, shift, command);
     Some(key_event)
