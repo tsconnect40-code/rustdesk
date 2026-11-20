@@ -139,6 +139,8 @@ void runMainApp(bool startService) async {
   if (startService) {
     gFFI.serverModel.startService();
   }
+  // tsconnect build: logged out at exit unless "auto login" is on.
+  await gFFI.userModel.tsLogoutUnlessAuto();
   await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
   gFFI.userModel.refreshCurrentUser();
   runApp(App());

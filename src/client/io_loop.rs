@@ -1505,8 +1505,10 @@ impl<T: InvokeUiSession> Remote<T> {
             return;
         }
         let lc = self.handler.lc.read().unwrap();
+        // tsconnect build: "ts-auto-privacy" = always black out the remote screen.
+        let ts_auto = LocalConfig::get_option("ts-auto-privacy") == "Y";
         if lc.version >= hbb_common::get_version_number("1.2.4")
-            && lc.get_toggle_option("privacy-mode")
+            && (lc.get_toggle_option("privacy-mode") || ts_auto)
         {
             let impl_key = lc.get_option("privacy-mode-impl-key");
             if impl_key == crate::privacy_mode::PRIVACY_MODE_IMPL_WIN_VIRTUAL_DISPLAY

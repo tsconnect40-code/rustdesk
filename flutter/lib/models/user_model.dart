@@ -189,6 +189,36 @@ class UserModel {
     }
   }
 
+  /// tsconnect build: without "auto login" the account does not survive a
+  /// program exit. Called when the last window closes and again at start-up
+  /// (covers shutdown / killed process). Quiet: no dialogs.
+  Future<void> tsLogoutUnlessAuto() async {
+    if (bind.mainGetLocalOption(key: 'ts-auto-login') == 'Y') return;
+    final token = bind.mainGetLocalOption(key: 'access_token');
+    if (token.isEmpty) return;
+    final name = (getLocalUserInfo()?['name'] ?? '').toString();
+    if (name.isNotEmpty) {
+      await bind.mainSetLocalOption(key: 'ts-last-user', value: name);
+    }
+    try {
+      final url = await bind.mainGetApiServer();
+      await http
+          .post(Uri.parse('$url/api/logout'),
+              body: jsonEncode({
+                'id': await bind.mainGetMyId(),
+                'uuid': await bind.mainGetUuid(),
+              }),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              })
+          .timeout(Duration(seconds: 2));
+    } catch (e) {
+      debugPrint("ts logout on exit failed: $e");
+    }
+    await reset(resetOther: true);
+  }
+
   /// throw [RequestException]
   Future<LoginResponse> login(LoginRequest loginRequest) async {
     final url = await bind.mainGetApiServer();

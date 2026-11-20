@@ -637,9 +637,11 @@ class LoginWidgetUserPass extends StatelessWidget {
   final RxString curOP;
   final Function() onLogin;
   final FocusNode? userFocusNode;
+  final RxBool? autoLogin;
   const LoginWidgetUserPass({
     Key? key,
     this.userFocusNode,
+    this.autoLogin,
     required this.username,
     required this.pass,
     required this.usernameMsg,
@@ -669,6 +671,18 @@ class LoginWidgetUserPass extends StatelessWidget {
               reRequestFocus: true,
               errorText: passMsg,
             ),
+            if (autoLogin != null)
+              Obx(() => InkWell(
+                    onTap: () => autoLogin!.value = !autoLogin!.value,
+                    child: Row(children: [
+                      Checkbox(
+                          value: autoLogin!.value,
+                          onChanged: (v) => autoLogin!.value = v ?? false),
+                      const Expanded(
+                          child: Text('자동 로그인 (프로그램을 껐다 켜도 로그인 유지)',
+                              style: TextStyle(fontSize: 13))),
+                    ]),
+                  )).marginOnly(top: 4),
             // NOT use Offstage to wrap LinearProgressIndicator
             if (isInProgress) const LinearProgressIndicator(),
             const SizedBox(height: 12.0),
@@ -720,9 +734,13 @@ Future<bool?> _openLoginDialogOnce() async {
 }
 
 Future<bool?> _openLoginDialog() async {
-  var username =
-      TextEditingController(text: UserModel.getLocalUserInfo()?['name'] ?? '');
+  final lastUser = bind.mainGetLocalOption(key: 'ts-last-user');
+  var username = TextEditingController(
+      text: UserModel.getLocalUserInfo()?['name'] ??
+          (lastUser.isNotEmpty ? lastUser : ''));
   var password = TextEditingController();
+  final tsAutoLogin =
+      (bind.mainGetLocalOption(key: 'ts-auto-login') == 'Y').obs;
   final userFocusNode = FocusNode()..requestFocus();
   Timer(Duration(milliseconds: 100), () => userFocusNode..requestFocus());
 
@@ -781,6 +799,8 @@ Future<bool?> _openLoginDialog() async {
               await bind.mainSetLocalOption(
                   key: 'user_info', value: jsonEncode(resp.user ?? {}));
             }
+            await bind.mainSetLocalOption(
+                key: 'ts-auto-login', value: tsAutoLogin.value ? 'Y' : 'N');
             if (close != null) {
               close(true);
             }
@@ -984,6 +1004,7 @@ Future<bool?> _openLoginDialog() async {
             curOP: curOP,
             onLogin: onLogin,
             userFocusNode: userFocusNode,
+            autoLogin: tsAutoLogin,
           ),
           thirdAuthWidget(),
         ],

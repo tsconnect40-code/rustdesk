@@ -468,6 +468,25 @@ class _GeneralState extends State<_General> {
         if (!isWeb) service(),
         theme(),
         _Card(title: 'Language', children: [language()]),
+        if (!bind.isIncomingOnly())
+          _Card(title: 'TS원격', children: [
+            _OptionCheckBox(
+              context,
+              '원격 조종할 때 상대 PC 화면 가리기 (검은 화면)',
+              kTsAutoPrivacy,
+              isServer: false,
+              optGetter: () => tsLocalFlag(kTsAutoPrivacy),
+              optSetter: (k, v) => tsSetLocalFlag(k, v),
+            ),
+            _OptionCheckBox(
+              context,
+              '자동 로그인 (끄면 프로그램 종료 시 로그아웃)',
+              kTsAutoLogin,
+              isServer: false,
+              optGetter: () => tsLocalFlag(kTsAutoLogin),
+              optSetter: (k, v) => tsSetLocalFlag(k, v),
+            ),
+          ]),
         if (!isWeb) hwcodec(),
         if (!isWeb) audio(context),
         if (!isWeb) record(context),

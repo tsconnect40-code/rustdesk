@@ -2886,6 +2886,11 @@ Future<void> onActiveWindowChanged() async {
       debugPrintStack(label: "$err");
     } finally {
       debugPrint("Start closing RustDesk...");
+      try {
+        await gFFI.userModel.tsLogoutUnlessAuto();
+      } catch (e) {
+        debugPrint("ts logout on exit: $e");
+      }
       await windowManager.setPreventClose(false);
       await windowManager.close();
       if (isMacOS) {
