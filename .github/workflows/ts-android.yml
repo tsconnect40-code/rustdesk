@@ -2,11 +2,10 @@
 # Builds aarch64 only and signs with our own key (secrets TS_KEYSTORE_B64 / TS_KEYSTORE_PASS).
 name: TS Android build
 
+# Manual only (Actions tab > TS Android build > Run workflow, branch ts-main):
+# pushing code never starts a build.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ts-android-*
 
 env:
   RUST_VERSION: "1.75"

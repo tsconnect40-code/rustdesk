@@ -3,11 +3,10 @@
 # x64 only, unsigned. Output: TSRemote-<ver>-b<run>-install.exe (the "-install.exe" suffix opens the installer).
 name: TS Windows build
 
+# Manual only (Actions tab > TS Windows build > Run workflow, branch ts-main):
+# pushing code never starts a build.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ts-win-*
 
 env:
   SCITER_RUST_VERSION: "1.75"
@@ -71,7 +70,9 @@ jobs:
         run: |
           flutter doctor -v
           flutter precache --windows
-          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          # Pinned copy (release ts-deps on our fork) of rustdesk/engine 'main', checked by SHA-256.
+          Invoke-WebRequest -Uri https://github.com/tsconnect40-code/rustdesk/releases/download/ts-deps/windows-x64-release.zip -OutFile windows-x64-release.zip
+          if ((Get-FileHash windows-x64-release.zip -Algorithm SHA256).Hash -ne 'EC8CABF36EE4FF24C8D98DE25B00E70781EB03876265AEE84D0FE554A110036E') { throw 'flutter engine zip hash mismatch' }
           Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
           mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
 
@@ -115,7 +116,9 @@ jobs:
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
 
-          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          # Pinned copy (release ts-deps) of rustdesk-org/rdev usbmmidd_v2, checked by SHA-256.
+          Invoke-WebRequest -Uri https://github.com/tsconnect40-code/rustdesk/releases/download/ts-deps/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          if ((Get-FileHash usbmmidd_v2.zip -Algorithm SHA256).Hash -ne '629B51E9944762BAE73948171C65D09A79595CF4C771A82EBC003FBBA5B24F51') { throw 'usbmmidd zip hash mismatch' }
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
           Remove-Item -Path usbmmidd_v2\Win32 -Recurse
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"

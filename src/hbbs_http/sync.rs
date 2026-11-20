@@ -132,7 +132,12 @@ async fn start_hbbs_sync_async() {
                 if need_upload {
                     v["version"] = json!(crate::VERSION);
                     // tsconnect build: lets the admin page tell TS원격 from official RustDesk.
-                    v["app"] = json!(crate::get_app_name());
+                    // The Android build keeps the internal name RustDesk; report it as TS원격 too.
+                    v["app"] = json!(if cfg!(target_os = "android") {
+                        "TSRemote".to_owned()
+                    } else {
+                        crate::get_app_name()
+                    });
                     v["id"] = json!(id);
                     v["uuid"] = json!(crate::encode64(hbb_common::get_uuid()));
                     let ab_name = Config::get_option(keys::OPTION_PRESET_ADDRESS_BOOK_NAME);

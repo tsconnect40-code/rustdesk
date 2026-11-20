@@ -1004,7 +1004,8 @@ Future<bool?> _openLoginDialog() async {
             curOP: curOP,
             onLogin: onLogin,
             userFocusNode: userFocusNode,
-            autoLogin: tsAutoLogin,
+            // logout-on-exit exists on desktop only
+            autoLogin: isDesktop ? tsAutoLogin : null,
           ),
           thirdAuthWidget(),
         ],
