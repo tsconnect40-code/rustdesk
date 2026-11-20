@@ -141,6 +141,12 @@ void runMainApp(bool startService) async {
   }
   // tsconnect build: logged out at exit unless "auto login" is on.
   await gFFI.userModel.tsLogoutUnlessAuto();
+  // tsconnect build: one-time defaults (the user can still change them later).
+  if (bind.mainGetLocalOption(key: 'ts-defaults-v1') != 'Y') {
+    // Remote screen: scale to fit the window.
+    bind.mainSetUserDefaultOption(key: kOptionViewStyle, value: kRemoteViewStyleAdaptive);
+    await bind.mainSetLocalOption(key: 'ts-defaults-v1', value: 'Y');
+  }
   await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
   gFFI.userModel.refreshCurrentUser();
   runApp(App());

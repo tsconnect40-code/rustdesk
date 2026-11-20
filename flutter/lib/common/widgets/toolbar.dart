@@ -833,6 +833,50 @@ Future<List<TRadioMenu<String>>> toolbarViewStyle(
   ], ownedActionIds: _kToolbarViewStyleActionIds);
 }
 
+// tsconnect build: one-click presets (codec + image quality + true color).
+class TsPreset {
+  final String label;
+  final String note;
+  final List<String> codecs; // first one the peer supports wins
+  final String quality;
+  final bool trueColor;
+  const TsPreset(
+      this.label, this.note, this.codecs, this.quality, this.trueColor);
+}
+
+const tsPresets = <TsPreset>[
+  TsPreset('문서 작업', 'VP9 · 최상의 화질 · 트루컬러', ['vp9'],
+      kRemoteImageQualityBest, true),
+  TsPreset('영상 보기', 'H264 · 균형', ['h264', 'h265', 'vp9'],
+      kRemoteImageQualityBalanced, false),
+  TsPreset('게임', 'H265/H264 · 빠른 속도', ['h265', 'h264', 'vp9'],
+      kRemoteImageQualityLow, false),
+  TsPreset('느린 인터넷', 'H265/VP9 · 빠른 속도', ['h265', 'vp9'],
+      kRemoteImageQualityLow, false),
+];
+
+Future<void> tsApplyPreset(FFI ffi, TsPreset p) async {
+  final sessionId = ffi.sessionId;
+  Map available = {};
+  try {
+    available =
+        jsonDecode(await bind.sessionAlternativeCodecs(sessionId: sessionId));
+  } catch (_) {}
+  // VP9 is always available; the others only when both sides support them.
+  final codec = p.codecs.firstWhere(
+      (c) => c == 'vp9' || available[c] == true,
+      orElse: () => 'auto');
+  await bind.sessionPeerOption(
+      sessionId: sessionId, name: kOptionCodecPreference, value: codec);
+  await bind.sessionSetImageQuality(sessionId: sessionId, value: p.quality);
+  final i444 = bind.sessionGetToggleOptionSync(sessionId: sessionId, arg: 'i444');
+  if (i444 != p.trueColor) {
+    await bind.sessionToggleOption(sessionId: sessionId, value: 'i444');
+  }
+  bind.sessionChangePreferCodec(sessionId: sessionId);
+  showToast('${p.label} 설정 적용 (${codec.toUpperCase()})');
+}
+
 Future<List<TRadioMenu<String>>> toolbarImageQuality(
     BuildContext context, String id, FFI ffi) async {
   final groupValue =

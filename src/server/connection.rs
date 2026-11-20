@@ -389,6 +389,9 @@ pub struct Connection {
     last_test_delay: Option<Instant>,
     network_delay: u32,
     lock_after_session_end: bool,
+    // tsconnect build: the PC was locked (or at the login screen) when this
+    // session was let in -> lock it again when the session ends.
+    ts_was_locked: bool,
     show_remote_cursor: bool,
     // by peer
     ip: String,
@@ -604,6 +607,7 @@ impl Connection {
             last_test_delay: None,
             network_delay: 0,
             lock_after_session_end: false,
+            ts_was_locked: false,
             show_remote_cursor: false,
             follow_remote_cursor: false,
             follow_remote_window: false,
@@ -1905,6 +1909,12 @@ impl Connection {
             return false;
         }
         self.lr.trusted_device_v2_token.clear();
+        #[cfg(windows)]
+        {
+            self.ts_was_locked =
+                crate::platform::windows::is_locked() || crate::platform::windows::is_prelogin();
+            log::info!("ts: session start, PC locked: {}", self.ts_was_locked);
+        }
         self.authorized = true;
         self.unauthorized_id = None;
         // One-time means gone once it has let a peer in, not once that peer
@@ -5318,7 +5328,7 @@ impl Connection {
         crate::audio_service::set_voice_call_input_device(None, true);
         log::info!("#{} Connection closed: {}", self.inner.id(), reason);
         if lock
-            && self.lock_after_session_end
+            && (self.lock_after_session_end || self.ts_was_locked)
             && self.keyboard
             && !raii::AuthedConnID::session_reconnected(self.inner.id(), &self.session_key())
         {

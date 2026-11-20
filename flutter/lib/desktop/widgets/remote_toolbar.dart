@@ -1762,6 +1762,7 @@ class _DisplayMenuState extends State<_DisplayMenu> {
         _screenAdjustor.adjustWindow(context),
         viewStyle(customPercent: _customPercent),
         scrollStyle(state, colorScheme),
+        if (ffi.connType == ConnType.defaultConn) tsPresetMenu(),
         imageQuality(),
         codec(),
         if (ffi.connType == ConnType.defaultConn)
@@ -1963,6 +1964,26 @@ class _DisplayMenuState extends State<_DisplayMenu> {
             Divider(),
           ]));
     });
+  }
+
+  // tsconnect build: 상황별 추천 설정
+  tsPresetMenu() {
+    return _SubmenuButton(
+      ffi: widget.ffi,
+      child: const Text('추천 설정'),
+      menuChildren: tsPresets
+          .map((p) => MenuButton(
+                ffi: ffi,
+                onPressed: () => tsApplyPreset(ffi, p),
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(text: p.label),
+                  TextSpan(
+                      text: '   ${p.note}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ])),
+              ))
+          .toList(),
+    );
   }
 
   imageQuality() {
