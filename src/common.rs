@@ -2071,7 +2071,12 @@ pub fn is_keyboard_mode_supported(
                 version_number >= hbb_common::get_version_number("1.2.0")
             }
         }
-        KeyboardMode::Translate => version_number >= hbb_common::get_version_number("1.2.0"),
+        // tsconnect build: translate mode is hidden. It injects characters directly,
+        // which bypasses the remote Korean IME (한글 typing breaks); map mode covers us.
+        KeyboardMode::Translate => {
+            let _ = version_number;
+            false
+        }
         KeyboardMode::Auto => version_number >= hbb_common::get_version_number("1.2.0"),
     }
 }

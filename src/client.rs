@@ -3747,7 +3747,12 @@ impl LoginConfigHandler {
                 crate::get_supported_keyboard_modes(get_version_number(&pi.version), &pi.platform);
             let current_mode = &KeyboardMode::from_str(&config.keyboard_mode).unwrap_or_default();
             if !keyboard_modes.contains(current_mode) {
-                config.keyboard_mode = KeyboardMode::Legacy.to_string();
+                // tsconnect build: a saved translate mode falls back to map, not legacy.
+                config.keyboard_mode = if keyboard_modes.contains(&KeyboardMode::Map) {
+                    KeyboardMode::Map.to_string()
+                } else {
+                    KeyboardMode::Legacy.to_string()
+                };
             }
         }
         // no matter if change, for update file time
