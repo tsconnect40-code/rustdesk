@@ -12,6 +12,7 @@ import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_hbb/models/input_model.dart';
 
 import './gestures.dart';
+import './ts_touch.dart';
 
 class RawKeyFocusScope extends StatelessWidget {
   final FocusNode? focusNode;
@@ -117,14 +118,49 @@ class _RawTouchGestureDetectorRegionState
   SessionID get sessionId => ffi.sessionId;
   bool get canvasLocked => isMobile && ffi.canvasModel.locked;
 
+  // TS원격 touch extras (phone -> PC).
+  late final TsScroller _tsScroll = TsScroller(ffi);
+  final TsPointerAccel _tsAccel = TsPointerAccel();
+  final TsThreeFinger _tsThree = TsThreeFinger();
+  int _tsTwoMode = 0; // 0 undecided, 1 scroll, 2 zoom, 3 canvas move
+  Offset _tsTwoAccum = Offset.zero;
+  bool get _tsMobile => isMobile && !ffiModel.isPeerAndroid;
+  bool get _tsSuppress => isMobile && _tsThree.recentlyMulti;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isMobile) {
+      TsTouch.load();
+      _tsThree.onAction = (a) => tsRunThreeAction(ffi, a);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tsScroll.stopFling();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return RawGestureDetector(
+    final detector = RawGestureDetector(
       child: widget.child,
       gestures: makeGestures(context),
     );
+    if (!isMobile) return detector;
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (e) {
+        _tsScroll.stopFling();
+        _tsThree.down(e);
+      },
+      onPointerMove: _tsThree.move,
+      onPointerUp: (e) => _tsThree.up(e),
+      onPointerCancel: (e) => _tsThree.up(e, cancel: true),
+      child: detector,
+    );
   }
-
   bool isNotTouchBasedDevice() {
     return !kTouchBasedDeviceKinds.contains(lastDeviceKind);
   }
@@ -158,6 +194,7 @@ class _RawTouchGestureDetectorRegionState
     if (isNotTouchBasedDevice()) {
       return;
     }
+    if (_tsSuppress) return;
     // Filter duplicate touch tap events on iOS (Magic Mouse issue).
     if (inputModel.shouldIgnoreTouchTap(d.globalPosition)) {
       return;
@@ -179,6 +216,7 @@ class _RawTouchGestureDetectorRegionState
     if (isNotTouchBasedDevice()) {
       return;
     }
+    if (_tsSuppress) return;
     // Filter duplicate touch tap events on iOS (Magic Mouse issue).
     final lastPos = _lastTapDownGlobalPosition;
     if (lastPos != null && inputModel.shouldIgnoreTouchTap(lastPos)) {
@@ -212,6 +250,7 @@ class _RawTouchGestureDetectorRegionState
     if (isNotTouchBasedDevice()) {
       return;
     }
+    if (_tsSuppress) return;
     if (ffiModel.touchMode && ffi.cursorModel.lastIsBlocked) {
       return;
     }
@@ -265,6 +304,7 @@ class _RawTouchGestureDetectorRegionState
     if (isNotTouchBasedDevice()) {
       return;
     }
+    if (_tsSuppress) return;
     if (!ffi.ffiModel.isPeerMobile) {
       if (handleTouch) {
         final isMoved = await ffi.cursorModel
@@ -277,6 +317,7 @@ class _RawTouchGestureDetectorRegionState
           return;
         }
       }
+      if (isMobile) TsTouch.haptic();
       await inputModel.tap(MouseButtons.right);
     } else {
       // It's better to send a message to tell the controlled device that the long press event is triggered.
@@ -318,6 +359,8 @@ class _RawTouchGestureDetectorRegionState
     final isDesktopInRemoteRect = (isDesktop || isWebDesktop) &&
         ffi.cursorModel.isInRemoteRect(_doubleFinerTapPosition);
     if (isMobileMouseMode || isDesktopInRemoteRect) {
+      if (_tsSuppress) return;
+      if (isMobile) TsTouch.haptic();
       await inputModel.tap(MouseButtons.right);
     }
   }
@@ -329,6 +372,7 @@ class _RawTouchGestureDetectorRegionState
     }
     if (!handleTouch) {
       if (isSpecialHoldDragActive) return;
+      _tsAccel.reset();
       await inputModel.sendMouse('down', MouseButtons.left);
     }
   }
@@ -339,7 +383,8 @@ class _RawTouchGestureDetectorRegionState
     }
     if (!handleTouch) {
       if (isSpecialHoldDragActive) return;
-      await ffi.cursorModel.updatePan(d.delta, d.localPosition, handleTouch);
+      final delta = _tsMobile ? _tsAccel.apply(d.delta) : d.delta;
+      await ffi.cursorModel.updatePan(delta, d.localPosition, handleTouch);
     }
   }
 
@@ -359,6 +404,7 @@ class _RawTouchGestureDetectorRegionState
     if (isNotTouchBasedDevice()) {
       return;
     }
+    _tsAccel.reset();
     if (handleTouch) {
       if (lastTapDownDetails != null) {
         await ffi.cursorModel.move(lastTapDownDetails.localPosition.dx,
@@ -414,11 +460,13 @@ class _RawTouchGestureDetectorRegionState
     if (handleTouch && !_touchModePanStarted) {
       return;
     }
+    final delta =
+        (_tsMobile && !handleTouch) ? _tsAccel.apply(d.delta) : d.delta;
     // In relative mouse mode, send delta directly without position tracking.
     if (inputModel.relativeMouseMode.value) {
-      await inputModel.sendMobileRelativeMouseMove(d.delta.dx, d.delta.dy);
+      await inputModel.sendMobileRelativeMouseMove(delta.dx, delta.dy);
     } else {
-      await ffi.cursorModel.updatePan(d.delta, d.localPosition, handleTouch);
+      await ffi.cursorModel.updatePan(delta, d.localPosition, handleTouch);
     }
   }
 
@@ -456,6 +504,9 @@ class _RawTouchGestureDetectorRegionState
       // Initialize the last focal point to calculate deltas manually.
       _lastSpecialHoldDragFocalPoint = d.focalPoint;
     }
+    _tsTwoMode = 0;
+    _tsTwoAccum = Offset.zero;
+    _tsScroll.begin();
   }
 
   onTwoFingerScaleUpdate(ScaleUpdateDetails d) async {
@@ -472,8 +523,31 @@ class _RawTouchGestureDetectorRegionState
       return;
     }
 
+    if (_tsMobile) {
+      if (_tsThree.activeCount >= 3) return;
+      if (_tsTwoMode == 0) {
+        _tsTwoAccum += d.focalPointDelta;
+        if (_tsThree.twoHoldArmed) {
+          // held still ~0.3s first: move/zoom the canvas, no PC scroll
+          _tsTwoMode = 3;
+          _scale = d.scale;
+        } else if ((d.scale - 1).abs() > 0.08) {
+          _tsTwoMode = 2;
+          _scale = 1;
+        } else if (_tsTwoAccum.distance > 14) {
+          _tsTwoMode = 1;
+          _tsScroll.update(_tsTwoAccum);
+          return;
+        } else {
+          return;
+        }
+      }
+      if (_tsTwoMode == 1) {
+        _tsScroll.update(d.focalPointDelta);
+        return;
+      }
+    }
     if (canvasLocked) return;
-
     if ((isDesktop || isWebDesktop)) {
       final scale = ((d.scale - _scale) * 1000).toInt();
       _scale = d.scale;
@@ -507,6 +581,10 @@ class _RawTouchGestureDetectorRegionState
               PointerEventToRust(kPointerEventKindTouch, 'scale', 0).toJson()));
     } else {
       // mobile
+      if (_tsTwoMode == 1 && _tsThree.activeCount < 3) {
+        _tsScroll.end(d.velocity);
+      }
+      _tsTwoMode = 0;
       _scale = 1;
       // No idea why we need to set the view style to "" here.
       // bind.sessionSetViewStyle(sessionId: sessionId, value: "");
@@ -517,7 +595,7 @@ class _RawTouchGestureDetectorRegionState
   }
 
   get onHoldDragCancel => null;
-  get onThreeFingerVerticalDragUpdate => ffi.ffiModel.isPeerAndroid
+  get onThreeFingerVerticalDragUpdate => (isMobile || ffi.ffiModel.isPeerAndroid)
       ? null
       : (d) {
           _mouseScrollIntegral += d.delta.dy / 4;
@@ -535,7 +613,7 @@ class _RawTouchGestureDetectorRegionState
       // Official
       TapGestureRecognizer:
           GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-              () => TapGestureRecognizer(), (instance) {
+              () => TsTapGestureRecognizer(), (instance) {
         instance
           ..onTapDown = onTapDown
           ..onTapUp = onTapUp
@@ -543,14 +621,14 @@ class _RawTouchGestureDetectorRegionState
       }),
       DoubleTapGestureRecognizer:
           GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
-              () => DoubleTapGestureRecognizer(), (instance) {
+              () => TsDoubleTapGestureRecognizer(), (instance) {
         instance
           ..onDoubleTapDown = onDoubleTapDown
           ..onDoubleTap = onDoubleTap;
       }),
       LongPressGestureRecognizer:
           GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-              () => LongPressGestureRecognizer(), (instance) {
+              () => TsLongPressGestureRecognizer(), (instance) {
         instance
           ..onLongPressDown = onLongPressDown
           ..onLongPressUp = onLongPressUp

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_hbb/common/widgets/remote_input.dart';
+import './ts_touch.dart';
 
 enum GestureState {
   none,
@@ -40,6 +41,9 @@ class CustomTouchGestureRecognizer extends ScaleGestureRecognizer {
   var _currentState = GestureState.none;
   Timer? _debounceTimer;
 
+  @override
+  bool isPointerAllowed(PointerDownEvent event) =>
+      !TsTouch.isPalm(event) && super.isPointerAllowed(event);
   void _init() {
     debugPrint("CustomTouchGestureRecognizer init");
     // onStart = (d) {};
@@ -221,6 +225,7 @@ class HoldTapMoveGestureRecognizer extends GestureRecognizer {
 
   @override
   bool isPointerAllowed(PointerDownEvent event) {
+    if (TsTouch.isPalm(event)) return false;
     if (_firstTap == null) {
       switch (event.buttons) {
         case kPrimaryButton:
@@ -487,6 +492,7 @@ class DoubleFinerTapGestureRecognizer extends GestureRecognizer {
 
   @override
   bool isPointerAllowed(PointerDownEvent event) {
+    if (TsTouch.isPalm(event)) return false;
     if (_firstTap == null) {
       switch (event.buttons) {
         case kPrimaryButton:
