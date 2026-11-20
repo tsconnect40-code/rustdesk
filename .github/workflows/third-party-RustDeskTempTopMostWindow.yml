@@ -44,10 +44,30 @@ jobs:
       - name: Download the source code
         run: |
           git clone https://github.com/rustdesk-org/RustDeskTempTopMostWindow RustDeskTempTopMostWindow
+          cd RustDeskTempTopMostWindow && git checkout ecd8d6a139eee76845ea66423fb739af450fda90
+
+      # tsconnect build: our own privacy-mode screen (black, small 'TS원격' note)
+      - name: Checkout TS privacy image
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          path: tsrepo
+          sparse-checkout: res/ts-privacy.png
+          sparse-checkout-cone-mode: false
+
+      - name: Use TS privacy image
+        shell: python
+        run: |
+          data = open('tsrepo/res/ts-privacy.png', 'rb').read()
+          rows = [', '.join('0x%02x' % c for c in data[i:i + 20]) for i in range(0, len(data), 20)]
+          nl = chr(10)
+          src = nl.join(['#include "pch.h"', '#include "./img.h"', '', 'const unsigned char g_img[] = {',
+                         (',' + nl).join(rows), '};', '', 'const long long g_imgLen = sizeof(g_img);', ''])
+          open('RustDeskTempTopMostWindow/WindowInjection/img.cpp', 'w').write(src)
+          print('img.cpp replaced,', len(data), 'bytes')
 
       - name: Build the project
         run: |
-          cd RustDeskTempTopMostWindow && git checkout ecd8d6a139eee76845ea66423fb739af450fda90
+          cd RustDeskTempTopMostWindow
           msbuild ${{ env.project_path }} -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.platform }} /p:TargetVersion=${{ inputs.target_version }}
 
       - name: Archive build artifacts
