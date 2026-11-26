@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter_hbb/mobile/ts_update.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -2671,9 +2672,17 @@ class _AboutState extends State<_About> {
               const SizedBox(
                 height: 8.0,
               ),
-              SelectionArea(
-                  child: Text('${translate('Version')}: $version')
-                      .marginSymmetric(vertical: 4.0)),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  SelectionArea(
+                      child: Text(
+                              '${translate('Version')}: ${tsVersionText(version)}')
+                          .marginSymmetric(vertical: 4.0)),
+                  const TsUpdateCheckButton(),
+                ],
+              ),
               SelectionArea(
                   child: Text('${translate('Build Date')}: $buildDate')
                       .marginSymmetric(vertical: 4.0)),
