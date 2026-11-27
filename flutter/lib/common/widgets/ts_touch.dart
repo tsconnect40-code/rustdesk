@@ -260,7 +260,7 @@ class TsThreeFinger {
     _twoReset();
     if (_start.length == 2 && !twoHoldArmed) {
       _twoBase.addAll(_pos);
-      _twoTimer = Timer(const Duration(milliseconds: 300), () {
+      _twoTimer = Timer(const Duration(milliseconds: 1000), () {
         _twoTimer = null;
         if (_start.length == 2) {
           twoHoldArmed = true;

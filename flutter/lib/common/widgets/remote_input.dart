@@ -528,7 +528,7 @@ class _RawTouchGestureDetectorRegionState
       if (_tsTwoMode == 0) {
         _tsTwoAccum += d.focalPointDelta;
         if (_tsThree.twoHoldArmed) {
-          // held still ~0.3s first: move/zoom the canvas, no PC scroll
+          // held still ~1s first: move/zoom the canvas, no PC scroll
           _tsTwoMode = 3;
           _scale = d.scale;
         } else if ((d.scale - 1).abs() > 0.08) {
