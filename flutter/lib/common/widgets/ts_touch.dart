@@ -374,8 +374,16 @@ class TsDoubleTapGestureRecognizer extends DoubleTapGestureRecognizer {
 
 class TsLongPressGestureRecognizer extends LongPressGestureRecognizer {
   @override
-  bool isPointerAllowed(PointerDownEvent event) =>
-      !TsTouch.isPalm(event) && super.isPointerAllowed(event);
+  bool isPointerAllowed(PointerDownEvent event) {
+    if (TsTouch.isPalm(event)) return false;
+    // A second finger means a two-finger gesture, not a one-finger long press
+    // (otherwise holding two fingers still fires a right click after 0.5s).
+    if (primaryPointer != null && state == GestureRecognizerState.possible) {
+      resolve(GestureDisposition.rejected);
+      return false;
+    }
+    return super.isPointerAllowed(event);
+  }
 }
 
 class _TsKey {
