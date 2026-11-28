@@ -5234,6 +5234,14 @@ lazy_static::lazy_static! {
 /// * `text` - The text of the message.
 #[inline]
 pub fn check_if_retry(msgtype: &str, title: &str, text: &str, retry_for_relay: bool) -> bool {
+    // tsconnect build: a DNS lookup failure right after the phone app comes back
+    // from the background is temporary (network not up yet), so retry it.
+    if msgtype == "error"
+        && title == "Connection Error"
+        && text.to_lowercase().contains("failed to lookup address")
+    {
+        return true;
+    }
     msgtype == "error"
         && title == "Connection Error"
         && ((text.contains("10054") || text.contains("104")) && retry_for_relay
@@ -5263,6 +5271,16 @@ mod retry_tests {
             "error",
             "Connection Error",
             "Incoming only mode",
+            false,
+        ));
+    }
+
+    #[test]
+    fn dns_lookup_error_is_retryable() {
+        assert!(check_if_retry(
+            "error",
+            "Connection Error",
+            "failed to lookup address information: No address associated with hostname",
             false,
         ));
     }
